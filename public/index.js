@@ -29,17 +29,6 @@ function fetchMetadata() {
   return fetch("/objects.json").then((res) => res.json());
 }
 
-function getCurrentFrameId(video, fps) {
-  let currentTime = video.currentTime;
-  let nFrame = Math.round(video.duration * fps);
-  let frameId = Math.round(currentTime * fps);
-  return Math.max(0, Math.min(frameId, nFrame - 1));
-}
-
-function getMaskListAtFrame(frameId) {
-  // TODO: do whatever you want, returns `objectNameList.length` png (masks)
-}
-
 function initialiseCanvasSize() {
   let container = document.getElementById("container");
   let canvas = document.getElementById("main-canvas");
@@ -73,11 +62,19 @@ window.onload = async function () {
 
   let mouseMoveListener;
 
+  let currentFrameId = 0;
+  function updateCurrentFrameId(_, metadata) {
+    let count = metadata.mediaTime * fps;
+    currentFrameId = Math.round(count);
+    video.requestVideoFrameCallback(updateCurrentFrameId);
+  }
+  video.requestVideoFrameCallback(updateCurrentFrameId);
+
   video.onpause = function () {
     clearCanvas();
 
-    let frameId = getCurrentFrameId(video, fps);
-    let maskList = objectNameList.map(function (objectName, objectId) {
+    let frameId = Math.max(0, Math.min(Math.round(video.duration * fps), currentFrameId));
+    let maskList = objectNameList.map(function (_, objectId) {
       return new Mask({ src: `/masks/${frameId}-${objectId + 1}.png` });
     });
 
