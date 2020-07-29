@@ -71,9 +71,11 @@ window.onload = async function () {
   }
   video.requestVideoFrameCallback(updateCurrentFrameId);
 
-  let mouseMoveListener;
+  let mouseMoveListener = null;
+  let mouseClickListener = null;
   function cleanup() {
     window.removeEventListener("mousemove", mouseMoveListener);
+    video.removeEventListener("click", mouseClickListener);
     mouseMoveListener = null;
     clearCanvas();
   }
@@ -85,17 +87,24 @@ window.onload = async function () {
       return new Mask({ src: `/masks/${frameId}-${objectId + 1}.png` });
     });
 
-    let currentMask = null;
-    mouseMoveListener = function (e) {
-      let found = null;
+    /**
+     * @param {MouseEvent} e
+     * @returns {[number, MouseEvent | void]}
+     */
+    function findMask(e) {
       let x = (e.screenX - offsetX) / width;
       let y = (e.screenY - offsetY) / height;
-      for (let mask of maskList) {
+      for (let [index, mask] of maskList.entries()) {
         if (mask.contains(x, y)) {
-          found = mask;
-          break;
+          return [index, mask];
         }
       }
+      return [-1, null];
+    }
+
+    let currentMask = null;
+    mouseMoveListener = function (e) {
+      let [_, found] = findMask(e);
       if (found === currentMask) {
         return;
       }
@@ -107,7 +116,29 @@ window.onload = async function () {
         clearCanvas();
       }
     };
+    /**
+     * @param {MouseEvent} e
+     */
+    mouseClickListener = function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      let [maskIndex, found] = findMask(e);
+      if (!found) {
+        // Click on background, resumes the video if it's currently paused
+        if (video.paused) {
+          video.play();
+        }
+        return;
+      }
+      // Click on a mask
+      if (!video.paused) {
+        // Video is playing, ignore
+        return;
+      }
+      alert(objectNameList[maskIndex]);
+    };
     window.addEventListener("mousemove", mouseMoveListener);
+    video.addEventListener("click", mouseClickListener);
   }
 
   video.onpause = initialiseMasks;
