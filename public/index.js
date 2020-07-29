@@ -18,10 +18,13 @@ class Mask {
     this.ctx = canvas.getContext("2d");
     this.ctx.drawImage(image, 0, 0, width, height);
   }
-  getPixel(x, y) {
+  contains(x, y) {
+    if (!this.ctx) {
+      return false;
+    }
     let actualX = Math.round(x * this.width);
     let actualY = Math.round(y * this.height);
-    return this.ctx.getImageData(actualX, actualY, 1, 1);
+    return this.ctx.getImageData(actualX, actualY, 1, 1).data[3] > 0;
   }
 }
 
@@ -60,8 +63,6 @@ window.onload = async function () {
     ctx.clearRect(0, 0, width, height);
   }
 
-  let mouseMoveListener;
-
   let currentFrameId = 0;
   function updateCurrentFrameId(_, metadata) {
     let count = metadata.mediaTime * fps;
@@ -70,23 +71,29 @@ window.onload = async function () {
   }
   video.requestVideoFrameCallback(updateCurrentFrameId);
 
-  video.onpause = function () {
+  let mouseMoveListener;
+  function cleanup() {
+    window.removeEventListener("mousemove", mouseMoveListener);
+    mouseMoveListener = null;
     clearCanvas();
+  }
+  function initialiseMasks() {
+    cleanup();
 
     let frameId = Math.max(0, Math.min(Math.round(video.duration * fps), currentFrameId));
     let maskList = objectNameList.map(function (_, objectId) {
       return new Mask({ src: `/masks/${frameId}-${objectId + 1}.png` });
     });
 
+    let currentMask = null;
     mouseMoveListener = function (e) {
       let found = null;
       let x = (e.screenX - offsetX) / width;
       let y = (e.screenY - offsetY) / height;
-      let a = [];
       for (let mask of maskList) {
-        if (mask.getPixel(x, y).data[3] > 0) {
+        if (mask.contains(x, y)) {
           found = mask;
-          a.push(mask.getPixel(x, y).data);
+          break;
         }
       }
       if (found === currentMask) {
@@ -100,18 +107,11 @@ window.onload = async function () {
         clearCanvas();
       }
     };
-
-    let currentMask = null;
     window.addEventListener("mousemove", mouseMoveListener);
-  };
+  }
 
-  video.onplay = function () {
-    window.removeEventListener("mousemove", mouseMoveListener);
-    clearCanvas();
-  };
-
-  video.onended = function () {
-    window.removeEventListener("mousemove", mouseMoveListener);
-    clearCanvas();
-  };
+  video.onpause = initialiseMasks;
+  video.onseeked = initialiseMasks;
+  video.onplay = cleanup;
+  video.onended = cleanup;
 };
