@@ -36,7 +36,7 @@ class Video {
   getCurrentFrameId() {
     let ans = this.video.requestVideoFrameCallback
       ? this._rvfc_currentFrameId
-      : this.video.currentTime * this.fps;
+      : Math.round(this.video.currentTime * this.fps);
     ans = Math.max(0, ans);
     ans = Math.min(ans, this.video.duration * this.fps);
     return ans;

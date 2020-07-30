@@ -1,6 +1,5 @@
 node_modules/*
 public/*
 !public/index.html
-!public/index.js
 !public/index.css
 masks.npy

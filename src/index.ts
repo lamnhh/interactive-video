@@ -29,11 +29,12 @@ window.onload = async function () {
   }
 
   function cleanup() {
+    canvas.style.zIndex = "-1";
     if (mouseMoveListener) {
       window.removeEventListener("mousemove", mouseMoveListener);
     }
     if (mouseClickListener) {
-      video.removeEventListener("click", mouseClickListener);
+      canvas.removeEventListener("click", mouseClickListener);
     }
     mouseMoveListener = null;
     mouseClickListener = null;
@@ -42,6 +43,7 @@ window.onload = async function () {
 
   function initialiseMasks() {
     cleanup();
+    canvas.style.zIndex = "100";
 
     let frameId = video.getCurrentFrameId();
     let maskList = objectNameList.map(function (_, objectId) {
@@ -93,7 +95,7 @@ window.onload = async function () {
       alert(objectNameList[maskIndex]);
     };
     window.addEventListener("mousemove", mouseMoveListener);
-    video.addEventListener("click", mouseClickListener);
+    canvas.addEventListener("click", mouseClickListener);
   }
 
   video.addEventListener("pause", initialiseMasks);
